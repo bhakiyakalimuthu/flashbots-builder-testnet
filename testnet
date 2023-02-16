@@ -1,0 +1,53 @@
+#!/bin/bash
+# devnet.sh run - runs a node
+# devnet.sh clean - cleans data dir
+
+set -e
+
+cd "$(dirname "$0")"
+
+if [ "$1" == "run" ]; then
+#    export GETH=${GETH:-geth}
+#    export BUILDER_TX_SIGNING_KEY=${BUILDER_TX_SIGNING_KEY:-0x2d5a8aee6ad4f1b8c2f113c4bca68eac5acc69f7547a6a16f2fa1528b33a602b}
+
+    if [ ! -d "data" ]
+       then
+           echo Creating genesis block
+           mkdir data
+           cp -r keystore data/
+           touch data/password
+           docker run --rm  -v ${PWD}/genesis.json:/data/genesis.json -v ${PWD}/data:/.root/ethereum builder init /data/genesis.json
+
+    fi
+
+    sleep 5
+    docker run --expose=8545 --env BUILDER_TX_SIGNING_KEY=0x2d5a8aee6ad4f1b8c2f113c4bca68eac5acc69f7547a6a16f2fa1528b33a602b -v ${PWD}/data:/data  builder \
+          --networkid 1337 \
+          --datadir=/data \
+          --unlock 8691735873B058E9C9959Cd1AE11E0Df941BB063 --password=/data/password --allow-insecure-unlock \
+          --mine \
+          --miner.algotype greedy \
+          --miner.maxmergedbundles 3 \
+          --miner.recommit 1s \
+          --nodiscover \
+          --port 30305 \
+          --http.api=eth,web3,net,debug,txpool \
+          --http \
+          --http.addr=127.0.0.1
+          --http.port=8545 \
+          --ws.api=eth,web3,net,debug,txpool \
+          --ws \
+          --ws.port=8546 \
+          --metrics \
+          --metrics.addr 127.0.0.1 \
+          --metrics.expensive \
+          --vmodule="miner=4"
+
+elif [ "$1" == "clean" ]; then
+    echo "Cleaning data dir"
+    rm -rf ./data
+else
+    echo "Usage: devnet.sh run|clean"
+fi
+
+
